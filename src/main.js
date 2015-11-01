@@ -4,6 +4,47 @@ function RunKonvaStuff(stHeight, stWidth) {
       height: stHeight,
       width: stWidth
     });
+    var integrator = function(f, start, end, step) {
+      var total = 0;
+      step = step || 0.01;
+      for (var i = start; i < end; i+= step) {
+        total += f(i + step/2) * step;
+      }
+      return total;
+    };
+
+    math.import({
+      integrate: integrator
+    });
+    var params = {};
+    params.a = 150;
+    params.b = 100;
+    params.factor = 4;
+
+    params.getPerimiter = function() {
+      params._f = f;
+      return math.integrate(f, 0, 2* Math.PI);
+      function f(t) {
+        return math.sqrt(
+          math.pow(params.a * math.sin(t), 2) +
+          math.pow(params.b * math.cos(t), 2)
+        );
+      }
+    };
+
+    params.getCircleRadius = function() {
+      var ep = this.getPerimiter();
+      var pm = ep/this.factor;
+      return pm / (2 * Math.PI);
+    };
+
+    params.getArcLength = function(t) {
+      return math.integrate(params._f, 0, t);
+    };
+
+    params.getCrclePerimeter = function() {
+      return Math.PI * 2 * this.getCircleRadius();
+    };
 
     var layer = new Konva.Layer();
     var ellipse = new Konva.Ellipse({
@@ -11,16 +52,13 @@ function RunKonvaStuff(stHeight, stWidth) {
       y: stHeight/2,
       stroke: 'red',
       radius: {
-        x: 150,
-        y: 100
+        x: params.a,
+        y: params.b
       },
       strokeWidth: 1
     });
 
-    var group = new Konva.Group({
-      // x: stWidth/2,
-      // y: stHeight/2,
-    });
+
     var points = [0,0 , 150, 0];
 
     var line = new Konva.Line({
@@ -30,43 +68,98 @@ function RunKonvaStuff(stHeight, stWidth) {
       x:stWidth/2,
       y: stHeight/2
     });
+    var spoints = [];
+    var spline = new Konva.Line({
+      x: 0,
+      y: 0,
+      points: spoints,
+      stroke: 'green',
+      tension: 0.3,
+      strokeWidth: 2
+    });
+    var layer2 = new Konva.Layer();
+    layer2.add(spline);
 
+    var r = params.getCircleRadius();
     var circle = new Konva.Circle({
-      x: stWidth/2 + 150,
-      y: stHeight/2,
-      radius: 50,
+      x: ellipse.x() + params.a + r,
+      y: ellipse.y(),
+      radius: r,
       stroke: 'blue',
       strokeWidth: 1
     });
+    var cline = new Konva.Line({
+      x: circle.x(),
+      y: circle.y(),
+      points: [0,0, -circle.radius(), 0],
+      stroke: 'green',
+      visible: true
+    });
+    var point = new Konva.Circle({
+      x: ellipse.x() + params.a,
+      y: ellipse.y(),
+      radius: 2,
+      fill:'green'
+    });
+    var group = new Konva.Group({
+      y: circle.y(),
+      x: circle.x(),
+    });
+    // group.add(line, circle);
+    group.add(cline, point, circle);
+    group.offset({x: circle.radius(), y: circle.radius()});
+    // group.setPosition(circle.getPosition());
+    group.offset(circle.getPosition());
 
-    group.add(line, circle);
-
-    layer.add(ellipse,group);
+    layer.add(ellipse, line, group);
     stage.add(layer);
+    stage.add(layer2);
     var angSpeed = 360 / 4;
     var theta = 0;
-    var animate = function(frame) {
-      theta += frame.timeDiff * angSpeed/1000;
-      var thRad = theta * Math.PI/180;
-      var rx, ry;
-      if(theta < 360) {
-        var arr = points;
-        rx = 150 * Math.cos(thRad);
-        ry = 100 * Math.sin(thRad);
-        arr[arr.length - 2] = rx;
-        arr[arr.length - 1] = ry;
+    var cp = params.getCrclePerimeter();
+    var getRotationDeg = function(arcLength) {
+      if(arcLength < cp) {
+        return arcLength * 180 / (Math.PI * circle.radius());
       }
       else {
-        theta = 0;
-        rx = 150; ry = 0;
-        points[points.length - 2] = rx;
-        points[points.length - 1] = ry;
+        // arcLength > cp
+        var revolutions = Math.floor(arcLength/cp);
+        var remaining = arcLength - revolutions * cp;
+        return remaining * 180 / (Math.PI * circle.radius());
       }
-      var cx = rx + stWidth/2, cy = ry + stHeight/2;
-      circle.setPosition({x:cx, y: cy});
     };
-    console.log(line);
-    var anim = new Konva.Animation(animate, layer);
+    var animate = function(frame) {
+      if(theta > 360) {
+        theta = 0;
+        //layer2.clear();
+        spoints.length = 0;
+      }
+      theta += frame.timeDiff * angSpeed/1000;
+      var thRad = theta * Math.PI/180;
+      var rx, ry, rcx, rcy;
+      rx = params.a * Math.cos(thRad);
+      ry = params.b * Math.sin(thRad);
+      rcx = rx + circle.radius() * Math.cos(thRad);
+      rcy = ry + circle.radius() * Math.sin(thRad);
+      points[points.length - 2] = rx;
+      points[points.length - 1] = ry;
+
+      var
+        pos = line.getPosition(),
+        cx = pos.x + rcx,
+        cy = pos.y + rcy;
+      // group.setPosition({x: cx, y: cy});
+      group.setPosition({x: cx, y: cy});
+      var al = params.getArcLength(thRad);
+      var deg = getRotationDeg(al);
+      group.setRotation(deg);
+      var p = point.getAbsolutePosition();
+      console.log(spoints.length);
+      //spoints.push.apply(spoints, [p.x, p.y]);
+      spoints.push(p.x, p.y);
+    };
+
+    var anim = new Konva.Animation(animate, [layer, layer2]);
     setTimeout(function(){
       anim.start();
     }, 2000);
