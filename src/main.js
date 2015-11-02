@@ -12,24 +12,23 @@ function RunKonvaStuff(stHeight, stWidth) {
       }
       return total;
     };
-
+    var arcFunction = function(x) {
+      var a = params.a, b = params.b;
+      return Math.sqrt(
+        Math.pow(a * Math.sin(x), 2) +
+        Math.pow(b * Math.cos(x), 2)
+      );
+    };
     math.import({
       integrate: integrator
     });
     var params = {};
     params.a = 150;
     params.b = 100;
-    params.factor = 4;
+    params.factor = 6;
 
     params.getPerimiter = function() {
-      params._f = f;
-      return math.integrate(f, 0, 2* Math.PI);
-      function f(t) {
-        return math.sqrt(
-          math.pow(params.a * math.sin(t), 2) +
-          math.pow(params.b * math.cos(t), 2)
-        );
-      }
+      return math.integrate(arcFunction, 0, 2* Math.PI);
     };
 
     params.getCircleRadius = function() {
@@ -39,10 +38,10 @@ function RunKonvaStuff(stHeight, stWidth) {
     };
 
     params.getArcLength = function(t) {
-      return math.integrate(params._f, 0, t);
+      return math.integrate(arcFunction, 0, t);
     };
 
-    params.getCrclePerimeter = function() {
+    params.getCirclePerimeter = function() {
       return Math.PI * 2 * this.getCircleRadius();
     };
 
@@ -74,7 +73,7 @@ function RunKonvaStuff(stHeight, stWidth) {
       y: 0,
       points: spoints,
       stroke: 'green',
-      tension: 0.3,
+
       strokeWidth: 2
     });
     var layer2 = new Konva.Layer();
@@ -116,7 +115,7 @@ function RunKonvaStuff(stHeight, stWidth) {
     stage.add(layer2);
     var angSpeed = 360 / 4;
     var theta = 0;
-    var cp = params.getCrclePerimeter();
+    var cp = params.getCirclePerimeter();
     var getRotationDeg = function(arcLength) {
       if(arcLength < cp) {
         return arcLength * 180 / (Math.PI * circle.radius());
@@ -133,6 +132,7 @@ function RunKonvaStuff(stHeight, stWidth) {
         theta = 0;
         //layer2.clear();
         spoints.length = 0;
+        spline.points(spoints);
       }
       theta += frame.timeDiff * angSpeed/1000;
       var thRad = theta * Math.PI/180;
@@ -155,8 +155,8 @@ function RunKonvaStuff(stHeight, stWidth) {
       group.setRotation(deg);
       var p = point.getAbsolutePosition();
       console.log(spoints.length);
-      //spoints.push.apply(spoints, [p.x, p.y]);
       spoints.push(p.x, p.y);
+      spline.points(spoints);
     };
 
     var anim = new Konva.Animation(animate, [layer, layer2]);
