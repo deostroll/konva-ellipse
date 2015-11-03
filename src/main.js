@@ -6,7 +6,7 @@ function RunKonvaStuff(stHeight, stWidth) {
     });
     var integrator = function(f, start, end, step) {
       var total = 0;
-      step = step || 0.01;
+      step = step || 0.001;
       for (var i = start; i < end; i+= step) {
         total += f(i + step/2) * step;
       }
@@ -23,9 +23,9 @@ function RunKonvaStuff(stHeight, stWidth) {
       integrate: integrator
     });
     var params = {};
-    params.a = 150;
-    params.b = 100;
-    params.factor = 6;
+    params.a = 120;
+    params.b = 80;
+    params.factor = 4;
 
     params.getPerimiter = function() {
       return math.integrate(arcFunction, 0, 2* Math.PI);
@@ -58,7 +58,7 @@ function RunKonvaStuff(stHeight, stWidth) {
     });
 
 
-    var points = [0,0 , 150, 0];
+    var points = [0,0 , params.a, 0];
 
     var line = new Konva.Line({
       stroke: 'black',
